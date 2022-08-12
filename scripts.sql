@@ -43,8 +43,29 @@ inner Join drug as d
 on p2.drug_name = d.drug_name
 Where d.opioid_drug_flag = 'Y'
 Group by p1.specialty_description
-Order by total_opioid desc, total_claim;
+Order by total_opioid desc;
 --A: Nurse Practitioner w/ 9551
 
 --Q2_C:
-Select 
+Select distinct(p1.specialty_description),
+    p1.npi
+From prescriber as p1
+Where p1.npi not in 
+    (Select p2.npi 
+    From prescription as p2);
+   
+   
+
+
+
+
+
+
+
+--Q3_A:
+Select d.generic_name,
+    sum(p2.total_drug_cost) as total_cost
+From drug as d
+Join prescription as p2
+Group by d.generic_name
+order by total_cost;
