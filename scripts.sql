@@ -172,9 +172,7 @@ Group By p.drug_name, p.total_claim_count, drug_type, first_name,last_name;
 
 -- First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Management') in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). Warning: Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 Select p1.npi,
-    d.drug_name,
-    p1.nppes_provider_first_name as first_name,
-    p1.nppes_provider_last_org_name as last_name
+    d.drug_name
 From prescriber as p1
 Left Join prescription as p2
 On p1.npi=p2.npi
@@ -183,9 +181,33 @@ On p2.drug_name=d.drug_name
 Where p1.specialty_description = 'Pain Management'
 And p1.nppes_provider_city = 'NASHVILLE'
 And d.opioid_drug_flag = 'Y'
-Group By p1.npi, d.drug_name, first_name, last_name;
+Group By p1.npi, d.drug_name;
 --A: "Run Query"
 
 --7_B:  Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
+Select p1.npi,
+    d.drug_name,
+    p2.total_claim_count
+From prescriber as p1
+Left Join prescription as p2
+On p1.npi=p2.npi
+Left Join drug as d
+On p2.drug_name=d.drug_name
+Where p1.specialty_description = 'Pain Management'
+And p1.nppes_provider_city = 'NASHVILLE'
+And d.opioid_drug_flag = 'Y'
+Group By p1.npi, d.drug_name, total_claim_count;
 
 --7_C:  Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
+Select p1.npi,
+    d.drug_name,
+    coalesce(p2.total_claim_count,0) as total_claim_count
+From prescriber as p1
+Left Join prescription as p2
+On p1.npi=p2.npi
+Left Join drug as d
+On p2.drug_name=d.drug_name
+Where p1.specialty_description = 'Pain Management'
+And p1.nppes_provider_city = 'NASHVILLE'
+And d.opioid_drug_flag = 'Y'
+Group By p1.npi, d.drug_name, total_claim_count;
