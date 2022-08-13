@@ -4,7 +4,7 @@ Select npi,
 From prescription
 Group by npi
 Order by total_claim desc;
---A: NPI-1881634483, Total 99707
+--A: NPI-1881634483, TCC-99707
 
 --Q1_B: Repeat the above, but this time report the nppes_provider_first_name, nppes_provider_last_org_name, specialty_description, and the total number of claims.
 Select p1.npi,
@@ -25,8 +25,8 @@ Order by total_claim desc;
 --Q2_A: Which specialty had the most total number of claims (totaled over all drugs)?
 Select distinct p1.specialty_description,
     sum(p2.total_claim_count) as total_claim
-From prescriber as p1
-left join prescription as p2
+From prescription as p2
+left join prescriber as p1
 on p1.npi = p2.npi
 Group by p1.specialty_description
 order by total_claim desc;
@@ -34,8 +34,7 @@ order by total_claim desc;
 
 --Q2_B:  Which specialty had the most total number of claims for opioids?
 Select p1.specialty_description,
-    sum(p2.total_claim_count)as total_claim,
-    count(d.opioid_drug_flag) as total_opioid
+    sum(p2.total_claim_count)as total_claim
 From prescriber as p1
 inner join prescription as p2
 On p1.npi = p2.npi
@@ -43,38 +42,32 @@ inner Join drug as d
 on p2.drug_name = d.drug_name
 Where d.opioid_drug_flag = 'Y'
 Group by p1.specialty_description
-Order by total_opioid desc;
+Order by total_claim desc;
 --A: Nurse Practitioner w/ 900845
 
 --*************Q2_C: Challenge Question: Are there any specialties that appear in the prescriber table that have no associated prescriptions in the prescription table?
-Select p1.specialty_description,
-    p1.npi
-From prescriber as p1
-left join prescription as p2
-on p1.npi=p2.npi
-Where p2.total_claim_count is null;
     
 --**********Q2_D:  Difficult Bonus: Do not attempt until you have solved all other problems! For each specialty, report the percentage of total claims by that specialty which are for opioids. Which specialties have a high percentage of opioids?
 
 --Q3_A:  Which drug (generic_name) had the highest total drug cost?
 Select d.generic_name,
-    p2.total_drug_cost
-From drug as d
-Join prescription as p2
+    sum(p2.total_drug_cost) as drug_cost
+From prescription as p2
+left Join drug as d
 On p2.drug_name = d.drug_name
-Group by d.generic_name, p2.total_drug_cost
-Order by p2.total_drug_cost desc;
---A: Pirfenidone, 2829174.3
+Group by d.generic_name
+Order by drug_cost desc;
+--A: Insulin Glargine, 104264066.3
 
 --Q3_B: Which drug (generic_name) has the hightest total cost per day? **Bonus: Round your cost per day column to 2 decimal places. Google ROUND to see how this works.
 Select d.generic_name,
-    Round(p2.total_drug_cost/total_day_supply, 2) as cost_per_day
+    Round(sum(p2.total_drug_cost)/sum(total_day_supply), 2) as cost_per_day
 From prescription as p2
 Left Join drug as d
 On p2.drug_name=d.drug_name
-group by d.generic_name, cost_per_day
+group by d.generic_name
 Order by cost_per_day desc;
---A: Immun Glob G(IGG)/GLY/IGA OV50, 7141.11
+--A: C1 Esterase Inhibitor / 3495.22
 
 --Q4_A: For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs.
 Select distinct drug_name,
@@ -85,7 +78,7 @@ From drug;
 --A: "Run Query"
 
 --Q4_B: Building off of the query you wrote for part a, determine whether more was spent (total_drug_cost) on opioids or on antibiotics. Hint: Format the total costs as MONEY for easier comparision. 
-Select sum(p.total_drug_cost) as cost, 
+Select Money(sum(p.total_drug_cost)) as total_cost, 
     Case When opioid_drug_flag ='Y' Then 'opioid'
     When antibiotic_drug_flag ='Y' Then 'antibiotic'
     Else 'neither' End As drug_type
@@ -93,18 +86,18 @@ From drug as d
 Inner join prescription as p
 On d.drug_name=p.drug_name
 Group by drug_type
-order by cost desc;
+order by total_cost desc;
 --A: Opioids
 
 --Q5_A:  How many CBSAs are in Tennessee? Warning: The cbsa table contains information for all states, not just Tennessee.
-Select count(c.cbsa),
+Select count(distinct c.cbsa),
     f.state
 From cbsa as c
 inner join fips_county as f
 on c.fipscounty=f.fipscounty
 Where f.state = 'TN'
 Group By f.state;
---A: 42
+--A: 10
 
 --Q5_B:  Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
 Select c.cbsa,c.cbsaname,
@@ -122,12 +115,12 @@ Order by sum(p.population) desc;
 --********Q5_C:  What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 Select c.cbsa, f.county,
     p.population
-From cbsa as c
-Inner Join fips_county as f
-On c.fipscounty=f.fipscounty
-Inner Join population as p
-On f.fipscounty=p.fipscounty
-Where 
+From fips_county as f
+full Join population as p
+On p.fipscounty=f.fipscounty
+full Join cbsa as c
+On f.fipscounty=c.fipscounty
+Where cbsa isnull
 Group by f.county, p.population, c.cbsa
 Order By p.population desc;
 
